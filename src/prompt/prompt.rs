@@ -1,22 +1,22 @@
-use std::{env, ffi::OsString, fmt::Display};
+use std::{env, ffi::OsString, fmt::Display, io::{self, Write}};
 
-use colored::Colorize;
+use crossterm::style::{ContentStyle, Stylize};
 
+use crate::LushError;
 
 pub type P = Promptable;
 
-#[derive(Debug, Clone)]
 pub enum Promptable {
-    Env(String),
-    Str(String),
+    Env(String, ContentStyle),
+    Str(String, ContentStyle),
 }
 
 impl Display for Promptable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let env = match self {
-            Self::Str(s) => s.clone().bold().yellow(),
-            Self::Env(s) => match env::var(OsString::from(s)) {
-                Ok(s) => s.green(),
+            Self::Str(s, style) => style.apply(s.clone()),
+            Self::Env(s, style) => match env::var(OsString::from(s)) {
+                Ok(s) => style.apply(s),
                 Err(e) => e.to_string().red(),
             },
         };
@@ -24,9 +24,16 @@ impl Display for Promptable {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive()]
 pub struct Prompt {
     pub lines: Vec<(Vec<P>, String)>,
+}
+
+impl Prompt {
+   pub fn render(&self) -> Result<(), LushError> {
+        print!("{}", self);
+        Ok(io::stdout().flush()?)
+   } 
 }
 
 impl Display for Prompt {

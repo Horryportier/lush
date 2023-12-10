@@ -2,4 +2,4 @@
 - [ ] prompt maker
     - [x] prompt type
     - [ ] prompt builder
-    - [ ] prompt styling
+    - [ ] prompt styling (switch to crossterm)

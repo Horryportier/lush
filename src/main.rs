@@ -1,19 +1,21 @@
-use colored::Colorize;
+use crossterm::style::{ContentStyle, Stylize};
 use prompt::prompt::{Prompt, P};
 use std::{
     env,
-    io::{self, stdin, Write},
+    io::{self, stdin},
     path::Path,
-    process::{Command, ExitStatus}, vec,
+    process::{Command, ExitStatus},
+    vec,
 };
 use thiserror::Error;
 mod prompt;
 
 #[derive(Debug, Error)]
-enum LushError {
+pub enum LushError {
     #[error("Io error {0}")]
     IoErr(#[from] io::Error),
     #[error("Lush error {0}")]
+    #[allow(dead_code)]
     LushErr(String),
 }
 
@@ -24,10 +26,6 @@ fn get_input(string: &mut String) {
         .expect("Failed to read user input");
 }
 
-fn render_prompt(prompt: &Prompt) -> Result<(), LushError> {
-    print!("\n{}", prompt);
-    Ok(io::stdout().flush()?)
-}
 
 fn run_cmd(cmd: &str, args: Vec<&str>) -> Result<ExitStatus, LushError> {
     let mut child = Command::new(cmd.trim()).args(args).spawn()?;
@@ -35,15 +33,42 @@ fn run_cmd(cmd: &str, args: Vec<&str>) -> Result<ExitStatus, LushError> {
 }
 
 fn main() {
+    let lush_style = ContentStyle::new()
+        .with(crossterm::style::Color::Green)
+        .attribute(crossterm::style::Attribute::Italic);
+    let curr_dir_style = ContentStyle::new()
+        .with(crossterm::style::Color::Cyan)
+        .attribute(crossterm::style::Attribute::Underdotted);
+    let arrow_style = ContentStyle::new()
+        .with(crossterm::style::Color::Red)
+        .attribute(crossterm::style::Attribute::Bold);
     let print_err = |e: LushError| eprintln!("{}", e.to_string().red());
-    let prompt = Prompt{lines: vec![(vec![P::Env("PWD".into()), P::Str(" =>".into())], " ".into())] };
+    let prompt = Prompt {
+        lines: vec![
+            (
+                vec![
+                    P::Str("lush".into(), lush_style),
+                    P::Env("PWD".into(), curr_dir_style),
+                    P::Str("🦀".into(), curr_dir_style.attribute(crossterm::style::Attribute::NoUnderline)),
+                ],
+                "::".into(),
+            ),
+            (vec![P::Str("=> ".into(), arrow_style)], " ".into()),
+        ],
+    };
     loop {
         let mut user_inuput = String::new();
-        let _ = render_prompt(&prompt).map_err(print_err);
+        match prompt.render() {
+            Ok(..) => (),
+            Err(..) => eprintln!("can't render prompt"),
+        }
         get_input(&mut user_inuput);
 
         let mut parts = user_inuput.trim().split_whitespace();
-        let cmd = parts.next().unwrap();
+        let cmd = match parts.next() {
+            Some(s) => s,
+            None => continue,
+        };
         let args = parts;
         match cmd {
             "cd" => {
