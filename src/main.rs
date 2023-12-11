@@ -9,6 +9,7 @@ use std::{
 };
 use thiserror::Error;
 mod prompt;
+mod colors;
 
 #[derive(Debug, Error)]
 pub enum LushError {
@@ -42,6 +43,8 @@ fn main() {
     let arrow_style = ContentStyle::new()
         .with(crossterm::style::Color::Red)
         .attribute(crossterm::style::Attribute::Bold);
+
+    let no_style =  ContentStyle::new();
     let print_err = |e: LushError| eprintln!("{}", e.to_string().red());
     let prompt = Prompt {
         lines: vec![
@@ -51,14 +54,14 @@ fn main() {
                     P::Env("PWD".into(), curr_dir_style),
                     P::Str("🦀".into(), curr_dir_style.attribute(crossterm::style::Attribute::NoUnderline)),
                 ],
-                "::".into(),
+                P::Str("::".into(), no_style),
             ),
-            (vec![P::Str("=> ".into(), arrow_style)], " ".into()),
+            (vec![P::Str("=> ".into(), arrow_style)], P::Str(" ".into(), no_style)),
         ],
     };
     loop {
         let mut user_inuput = String::new();
-        match prompt.render() {
+        match Prompt::default().render() {
             Ok(..) => (),
             Err(..) => eprintln!("can't render prompt"),
         }

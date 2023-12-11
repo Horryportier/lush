@@ -1,10 +1,17 @@
-use std::{env, ffi::OsString, fmt::Display, io::{self, Write}};
+use std::{
+    env,
+    ffi::OsString,
+    fmt::Display,
+    io::{self, Write},
+};
 
 use crossterm::style::{ContentStyle, Stylize};
 
-use crate::LushError;
+use crate::{colors::colors::DEF_STYLE, LushError};
 
 pub type P = Promptable;
+
+pub const DEF_SPLIT: fn() -> P = || P::Str(String::from(" "), DEF_STYLE());
 
 pub enum Promptable {
     Env(String, ContentStyle),
@@ -26,14 +33,66 @@ impl Display for Promptable {
 
 #[derive()]
 pub struct Prompt {
-    pub lines: Vec<(Vec<P>, String)>,
+    pub lines: Vec<(Vec<P>, P)>,
 }
 
 impl Prompt {
-   pub fn render(&self) -> Result<(), LushError> {
+    pub fn new() -> Prompt {
+        Prompt { lines: Vec::new() }
+    }
+    pub fn add_line(mut self, split: P) -> Prompt {
+        self.lines.append(&mut vec![(Vec::new(), split)]);
+        self
+    }
+
+    pub fn add_str(mut self, string: String, style: ContentStyle) -> Prompt {
+        match self.lines.last_mut() {
+            Some(l) => {
+                l.0.append(&mut vec![P::Str(string, style)]);
+                return self;
+            }
+            None => {
+                self = self.add_line(DEF_SPLIT());
+                self.lines
+                    .last_mut()
+                    .unwrap()
+                    .0
+                    .append(&mut vec![P::Str(string, style)]);
+                return self;
+            }
+        }
+    }
+
+    pub fn add_env(mut self, env: String, style: ContentStyle) -> Prompt {
+        match self.lines.last_mut() {
+            Some(l) => {
+                l.0.append(&mut vec![P::Env(env, style)]);
+                return self;
+            }
+            None => {
+                self = self.add_line(DEF_SPLIT());
+                self.lines
+                    .last_mut()
+                    .unwrap()
+                    .0
+                    .append(&mut vec![P::Env(env, style)]);
+                return self;
+            }
+        }
+    }
+
+    pub fn default() -> Prompt {
+        let tmp = Prompt { lines: Vec::new() };
+        tmp.add_line(P::Str("::".into(), DEF_STYLE()))
+            .add_str("lush".into(), ContentStyle::new().green().italic())
+            .add_env("PWD".into(), ContentStyle::new().cyan().underlined())
+            .add_line(P::Str(" ".into(), DEF_STYLE()))
+            .add_str("-> ".into(), ContentStyle::new().yellow().bold())
+    }
+    pub fn render(&self) -> Result<(), LushError> {
         print!("{}", self);
         Ok(io::stdout().flush()?)
-   } 
+    }
 }
 
 impl Display for Prompt {
@@ -45,7 +104,7 @@ impl Display for Prompt {
                 x.0.iter()
                     .map(|y| y.to_string())
                     .collect::<Vec<String>>()
-                    .join(&x.1)
+                    .join(&x.1.to_string())
             })
             .collect();
 
