@@ -1,3 +1,4 @@
+use command::command::Input;
 use crossterm::style::{ContentStyle, Stylize};
 use prompt::prompt::{Prompt, P};
 use std::{
@@ -10,6 +11,7 @@ use std::{
 use thiserror::Error;
 mod prompt;
 mod colors;
+mod command;
 
 #[derive(Debug, Error)]
 pub enum LushError {
@@ -66,36 +68,36 @@ fn main() {
             Err(..) => eprintln!("can't render prompt"),
         }
         get_input(&mut user_inuput);
-
-        let mut parts = user_inuput.trim().split_whitespace();
-        let cmd = match parts.next() {
-            Some(s) => s,
-            None => continue,
-        };
-        let args = parts;
-        match cmd {
-            "cd" => {
-                let new_dir = args.clone().peekable().peek().map_or("/", |x| *x);
-                let root = Path::new(new_dir);
-                if let Err(e) = env::set_current_dir(&root) {
-                    eprintln!("{e}");
-                };
-            }
-            "#" => {
-                print!(
-                    "# {}",
-                    args.clone()
-                        .collect::<Vec<&str>>()
-                        .join(" ")
-                        .cyan()
-                        .italic()
-                )
-            }
-            "exit" => break,
-            _ => {
-                let _exit_status = run_cmd(cmd, args.collect()).map_err(print_err);
-                ()
-            }
-        }
+        println!("{:#?}", Input::parse(user_inuput.as_str()));
+        //let mut parts = user_inuput.trim().split_whitespace();
+        //let cmd = match parts.next() {
+        //    Some(s) => s,
+        //    None => continue,
+        //};
+        //let args = parts;
+        //match cmd {
+        //    "cd" => {
+        //        let new_dir = args.clone().peekable().peek().map_or("/", |x| *x);
+        //        let root = Path::new(new_dir);
+        //        if let Err(e) = env::set_current_dir(&root) {
+        //            eprintln!("{e}");
+        //        };
+        //    }
+        //    "#" => {
+        //        print!(
+        //            "# {}",
+        //            args.clone()
+        //                .collect::<Vec<&str>>()
+        //                .join(" ")
+        //                .cyan()
+        //                .italic()
+        //        )
+        //    }
+        //    "exit" => break,
+        //    _ => {
+        //        let _exit_status = run_cmd(cmd, args.collect()).map_err(print_err);
+        //        ()
+        //    }
+        //}
     }
 }

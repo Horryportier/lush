@@ -7,7 +7,12 @@
 
 - [ ] basic shell stuff
     - [ ] history
-    - [ ] pipes
+    - [ ] pipes *
+        - [x] read about pipes
+        - [ ] implemenet them 
+            - [x] parse input 
+            - [ ] if next input is an pipe  pipe input to next command 
+            - [ ] if next input is just break then pipe current to stdout and execute next 
     - [ ] clear 
     - [ ] autocomplete
     - [ ] shell script (super set of bash? or ability to use bash)
