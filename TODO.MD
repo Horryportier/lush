@@ -11,9 +11,7 @@
         - [x] read about pipes
         - [ ] implemenet them 
             - [x] parse input 
-            - [ ] if next input is an pipe  pipe input to next command 
-            - [ ] if next input is just break then pipe current to stdout and execute next 
-    - [ ] clear 
+            - [ ] if break print if pipe pipe to next command if none if none just print
     - [ ] autocomplete
     - [ ] shell script (super set of bash? or ability to use bash)
 

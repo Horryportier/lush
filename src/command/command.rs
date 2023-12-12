@@ -1,4 +1,4 @@
-use crate::colors::colors::ERROR_STYLE;
+use crate::{colors::colors::ERROR_STYLE, error::error::LushError};
 
 #[derive(Debug, Clone)]
 pub enum InputType {
@@ -7,21 +7,26 @@ pub enum InputType {
     Break,
 }
 
+pub enum SpacialCommand {
+    Exit,
+    CD(Vec<String>),
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Command {
-    cmd: String,
-    args: Vec<String>,
+    pub cmd: String,
+    pub args: Vec<String>,
 }
 
 #[derive(Debug)]
 pub struct Input {
-    comamnds: Option<Vec<InputType>>,
+    pub commands: Option<Vec<InputType>>,
 }
 
 impl Input {
     pub fn parse(input: &str) -> Input {
         let err_style = ERROR_STYLE();
-         
+
         let parts = input
             .split_whitespace()
             .into_iter()
@@ -44,7 +49,7 @@ impl Input {
 
         println!("{:?}", parts);
         if parts.clone().len() == 0 {
-            return Input { comamnds: None };
+            return Input { commands: None };
         }
         let mut cmds: Vec<InputType> = Vec::new();
         let mut cmd: Vec<String> = Vec::new();
@@ -52,8 +57,11 @@ impl Input {
             match part.trim() {
                 "|" => {
                     if i == 0 {
-                        eprintln!("{}", err_style.apply("can not use pipe \"|\"  as first argument"));
-                        return Input { comamnds: None };
+                        eprintln!(
+                            "{}",
+                            err_style.apply("can not use pipe \"|\"  as first argument")
+                        );
+                        return Input { commands: None };
                     }
                     if !cmd.is_empty() {
                         let mut cmd = cmd.into_iter();
@@ -66,8 +74,11 @@ impl Input {
                 }
                 ";" => {
                     if i == 0 {
-                        eprintln!("{}", err_style.apply("can not use break \";\" as first argument"));
-                        return Input { comamnds: None };
+                        eprintln!(
+                            "{}",
+                            err_style.apply("can not use break \";\" as first argument")
+                        );
+                        return Input { commands: None };
                     }
                     if !cmd.is_empty() {
                         let mut cmd = cmd.into_iter();
@@ -88,7 +99,31 @@ impl Input {
             cmds.push(InputType::Cmd(Command { cmd: c, args: a }))
         }
         return Input {
-            comamnds: Some(cmds),
+            commands: Some(cmds),
         };
+    }
+
+    pub fn eval(self) -> Result<Option<SpacialCommand>, LushError> {
+        if let Some(cmds) = self.commands {
+            for cmd in cmds {
+                match cmd {
+                    InputType::Break => todo!(),
+                    InputType::Pipe => todo!(),
+                    InputType::Cmd(c) => {
+                        return match c.cmd.as_str() {
+                            "exit" => Ok(Some(SpacialCommand::Exit)),
+                            "cd" => Ok(Some(SpacialCommand::CD(c.args))),
+                            "err" => Err(LushError::LushErr("error".into())),
+                            _ => {
+                                println!("{c:#?}");
+                                Ok(None)
+                            }
+                        };
+                    }
+                }
+            }
+        }
+
+        Ok(None)
     }
 }

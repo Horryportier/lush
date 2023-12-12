@@ -1,38 +1,21 @@
-use command::command::Input;
+use command::command::{Input, SpacialCommand};
 use crossterm::style::{ContentStyle, Stylize};
+use error::error::LushError;
 use prompt::prompt::{Prompt, P};
 use std::{
-    env,
-    io::{self, stdin},
-    path::Path,
-    process::{Command, ExitStatus},
+    io::stdin,
     vec,
 };
-use thiserror::Error;
-mod prompt;
 mod colors;
 mod command;
-
-#[derive(Debug, Error)]
-pub enum LushError {
-    #[error("Io error {0}")]
-    IoErr(#[from] io::Error),
-    #[error("Lush error {0}")]
-    #[allow(dead_code)]
-    LushErr(String),
-}
+mod error;
+mod prompt;
 
 fn get_input(string: &mut String) {
     stdin()
         .read_line(string)
         .ok()
         .expect("Failed to read user input");
-}
-
-
-fn run_cmd(cmd: &str, args: Vec<&str>) -> Result<ExitStatus, LushError> {
-    let mut child = Command::new(cmd.trim()).args(args).spawn()?;
-    Ok(child.wait()?)
 }
 
 fn main() {
@@ -46,7 +29,7 @@ fn main() {
         .with(crossterm::style::Color::Red)
         .attribute(crossterm::style::Attribute::Bold);
 
-    let no_style =  ContentStyle::new();
+    let no_style = ContentStyle::new();
     let print_err = |e: LushError| eprintln!("{}", e.to_string().red());
     let prompt = Prompt {
         lines: vec![
@@ -54,11 +37,17 @@ fn main() {
                 vec![
                     P::Str("lush".into(), lush_style),
                     P::Env("PWD".into(), curr_dir_style),
-                    P::Str("🦀".into(), curr_dir_style.attribute(crossterm::style::Attribute::NoUnderline)),
+                    P::Str(
+                        "🦀".into(),
+                        curr_dir_style.attribute(crossterm::style::Attribute::NoUnderline),
+                    ),
                 ],
                 P::Str("::".into(), no_style),
             ),
-            (vec![P::Str("=> ".into(), arrow_style)], P::Str(" ".into(), no_style)),
+            (
+                vec![P::Str("=> ".into(), arrow_style)],
+                P::Str(" ".into(), no_style),
+            ),
         ],
     };
     loop {
@@ -68,7 +57,14 @@ fn main() {
             Err(..) => eprintln!("can't render prompt"),
         }
         get_input(&mut user_inuput);
-        println!("{:#?}", Input::parse(user_inuput.as_str()));
+        if let Ok(spacial_command) = Input::parse(user_inuput.as_str()).eval() { 
+            if let Some(cmd) =  spacial_command {
+                match cmd {
+                    SpacialCommand::Exit => return,
+                    SpacialCommand::CD(_) => todo!(),
+                }
+            }
+        } 
         //let mut parts = user_inuput.trim().split_whitespace();
         //let cmd = match parts.next() {
         //    Some(s) => s,
