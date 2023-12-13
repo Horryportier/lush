@@ -16,6 +16,7 @@ pub const DEF_SPLIT: fn() -> P = || P::Str(String::from(" "), DEF_STYLE());
 pub enum Promptable {
     Env(String, ContentStyle),
     Str(String, ContentStyle),
+    Fun(fn() -> String, ContentStyle)
 }
 
 impl Display for Promptable {
@@ -26,6 +27,7 @@ impl Display for Promptable {
                 Ok(s) => style.apply(s),
                 Err(e) => e.to_string().red(),
             },
+            Self::Fun(f,style) => style.apply(f())
         };
         write!(f, "{env}")
     }
@@ -37,6 +39,7 @@ pub struct Prompt {
 }
 
 impl Prompt {
+    #[allow(dead_code)]
     pub fn new() -> Prompt {
         Prompt { lines: Vec::new() }
     }
@@ -81,11 +84,30 @@ impl Prompt {
         }
     }
 
+    pub fn add_fun(mut self, fun:  fn() -> String, style: ContentStyle) -> Prompt {
+        match self.lines.last_mut() {
+            Some(l) => {
+                l.0.append(&mut vec![P::Fun(fun, style)]);
+                return self;
+            }
+            None => {
+                self = self.add_line(DEF_SPLIT());
+                self.lines
+                    .last_mut()
+                    .unwrap()
+                    .0
+                    .append(&mut vec![P::Fun(fun, style)]);
+                return self;
+            }
+        }
+    }
     pub fn default() -> Prompt {
         let tmp = Prompt { lines: Vec::new() };
         tmp.add_line(P::Str("::".into(), DEF_STYLE()))
             .add_str("lush".into(), ContentStyle::new().green().italic())
-            .add_env("PWD".into(), ContentStyle::new().cyan().underlined())
+            .add_fun(|| {
+                env::current_dir().map_or("ERR".to_string(), |f| f.to_string_lossy().to_string())
+            }, ContentStyle::new().cyan().underlined())
             .add_line(P::Str(" ".into(), DEF_STYLE()))
             .add_str("-> ".into(), ContentStyle::new().yellow().bold())
     }

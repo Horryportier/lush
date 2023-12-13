@@ -1,3 +1,5 @@
+use std::process::{Child, Stdio};
+
 use crate::{colors::colors::ERROR_STYLE, error::error::LushError};
 
 #[derive(Debug, Clone)]
@@ -18,7 +20,7 @@ pub struct Command {
     pub args: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Input {
     pub commands: Option<Vec<InputType>>,
 }
@@ -47,7 +49,6 @@ impl Input {
             .copied()
             .collect::<Vec<&str>>();
 
-        println!("{:?}", parts);
         if parts.clone().len() == 0 {
             return Input { commands: None };
         }
@@ -105,22 +106,56 @@ impl Input {
 
     pub fn eval(self) -> Result<Option<SpacialCommand>, LushError> {
         if let Some(cmds) = self.commands {
-            for cmd in cmds {
-                match cmd {
-                    InputType::Break => todo!(),
-                    InputType::Pipe => todo!(),
-                    InputType::Cmd(c) => {
-                        return match c.cmd.as_str() {
-                            "exit" => Ok(Some(SpacialCommand::Exit)),
-                            "cd" => Ok(Some(SpacialCommand::CD(c.args))),
-                            "err" => Err(LushError::LushErr("error".into())),
-                            _ => {
-                                println!("{c:#?}");
-                                Ok(None)
+            let mut cmds = cmds.iter();
+            let mut prev_command: Option<Child> = None;
+            while let Some(cmd_type) = cmds.next() {
+                match cmd_type {
+                    InputType::Pipe => continue,
+                    InputType::Break => continue,
+                    InputType::Cmd(command) => match command.cmd.as_str() {
+                        "exit" => return Ok(Some(SpacialCommand::Exit)),
+                        "cd" => return Ok(Some(SpacialCommand::CD(command.clone().args))),
+                        _ => {
+                            let stdin =
+                                prev_command.map_or(Stdio::inherit(), |mut output: Child| {
+                                    Stdio::from(match output.stdout.take() {
+                                        Some(s) => Stdio::from(s),
+                                        None => Stdio::inherit(),
+                                    })
+                                });
+
+                            let stdout = match cmds.clone().peekable().peek() {
+                                None => Stdio::inherit(),
+                                Some(cmd_type) => match cmd_type {
+                                    InputType::Cmd(..) => {
+                                        return Err(LushError::LushErr(
+                                            "comand one fater another".into(),
+                                        ))
+                                    }
+                                    InputType::Break => Stdio::inherit(),
+                                    InputType::Pipe => Stdio::piped(),
+                                },
+                            };
+                            let output = std::process::Command::new(command.clone().cmd)
+                                .args(command.clone().args)
+                                .stdin(stdin)
+                                .stdout(stdout)
+                                .spawn();
+                            match output {
+                                Ok(out) => {
+                                    prev_command = Some(out);
+                                }
+                                Err(e) => {
+                                    prev_command = None;
+                                    eprintln!("{e}")
+                                }
                             }
-                        };
-                    }
+                        }
+                    },
                 }
+            }
+            if let Some(mut final_command) = prev_command {
+                let _ = final_command.wait();
             }
         }
 

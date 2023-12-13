@@ -3,15 +3,14 @@
     - [x] prompt type
     - [x] prompt builder
     - [x] prompt styling (switch to crossterm)
-    - [ ] function as Promptable
+    - [ ] function as Promptable *
 
 - [ ] basic shell stuff
     - [ ] history
-    - [ ] pipes *
+    - [x] pipes 
         - [x] read about pipes
-        - [ ] implemenet them 
+        - [x] implemenet them 
             - [x] parse input 
-            - [ ] if break print if pipe pipe to next command if none if none just print
     - [ ] autocomplete
     - [ ] shell script (super set of bash? or ability to use bash)
 
@@ -22,3 +21,5 @@
     - [ ] smart autocomplete
     
 
+- other
+    - [x] clean_up main file
